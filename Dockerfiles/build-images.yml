@@ -28,3 +28,9 @@ services:
     build:
       context: vuln_apache/
     image: vuln_apache:${VULN_APACHE_VERSION}
+
+  monkey_island:
+    build:
+      context: monkey_island/
+      dockerfile: Dockerfile
+    image: monkey_island:${MONKEY_ISLAND_VERSION}

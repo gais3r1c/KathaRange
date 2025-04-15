@@ -1,4 +1,4 @@
-FROM ubuntu:23.04
+FROM ubuntu:22.04
 
 SHELL ["/bin/bash", "-c"]
 
@@ -8,13 +8,17 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
 
 WORKDIR /usr/src/app
 
-# Make sure user cloned caldera recursively before installing anything.
+# Aggiungiamo tutto il contenuto (incluso caldera e i suoi plugin)
 ADD . .
-RUN if [ -z "$(ls plugins/stockpile)" ]; then echo "stockpile plugin not downloaded - please ensure you recursively cloned the caldera git repository and try again."; exit 1; fi
+
+# Verifica ricorsività del clone (plugin stockpile)
+RUN if [ -z "$(ls plugins/stockpile)" ]; then \
+    echo "stockpile plugin not downloaded - please ensure you recursively cloned the caldera git repository and try again."; \
+    exit 1; \
+fi
 
 RUN apt-get update && \
     apt-get -y install python3 python3-pip python3-venv git curl golang-go vim
-
 
 #WIN_BUILD is used to enable windows build in sandcat plugin
 ARG WIN_BUILD=false
@@ -30,67 +34,60 @@ RUN pip3 install --no-cache-dir -r requirements.txt
 
 # Set up config file and disable atomic by default
 RUN python3 -c "import app; import app.utility.config_generator; app.utility.config_generator.ensure_local_config();"
-    #\ sed -i '/\- atomic/d' conf/local.yml;
 
-# Compile default sandcat agent binaries, which will download basic golang dependencies.
-
-# Install Go dependencies
+# Install Go dependencies and build sandcat agents
 WORKDIR /usr/src/app/plugins/sandcat/gocat
 RUN go mod tidy && go mod download
 
 WORKDIR /usr/src/app/plugins/sandcat
-
-# Fix line ending error that can be caused by cloning the project in a Windows environment
-RUN if [ "$WIN_BUILD" = "true" ] ; then cp ./update-agents.sh ./update-agents-copy.sh; fi
-RUN if [ "$WIN_BUILD" = "true" ] ; then tr -d '\15\32' < ./update-agents-copy.sh > ./update-agents.sh; fi
-RUN if [ "$WIN_BUILD" = "true" ] ; then rm ./update-agents-copy.sh; fi
-
+RUN if [ "$WIN_BUILD" = "true" ] ; then cp ./update-agents.sh ./update-agents-copy.sh && tr -d '\15\32' < ./update-agents-copy.sh > ./update-agents.sh && rm ./update-agents-copy.sh; fi
 RUN ./update-agents.sh
 
-# Check if we can compile the sandcat extensions, which will download golang dependencies for agent extensions
+# Test building gocat extensions
 RUN mkdir /tmp/gocatextensionstest
-
-RUN cp -R ./gocat /tmp/gocatextensionstest/gocat
-RUN cp -R ./gocat-extensions/* /tmp/gocatextensionstest/gocat/
-
-RUN cp ./update-agents.sh /tmp/gocatextensionstest/update-agents.sh
+RUN cp -R ./gocat /tmp/gocatextensionstest/gocat && \
+    cp -R ./gocat-extensions/* /tmp/gocatextensionstest/gocat/ && \
+    cp ./update-agents.sh /tmp/gocatextensionstest/update-agents.sh
 
 WORKDIR /tmp/gocatextensionstest
-
 RUN mkdir /tmp/gocatextensionstest/payloads
-
 RUN ./update-agents.sh
 
-# Clone atomic red team repo for the atomic plugin
-RUN if [ ! -d "/usr/src/app/plugins/atomic/data/atomic-red-team" ]; then   \
-    git clone --depth 1 https://github.com/redcanaryco/atomic-red-team.git \
-        /usr/src/app/plugins/atomic/data/atomic-red-team;                  \
+# Clone atomic red team repo for atomic plugin if not present
+WORKDIR /usr/src/app
+RUN if [ ! -d "plugins/atomic/data/atomic-red-team" ]; then \
+    git clone --depth 1 https://github.com/redcanaryco/atomic-red-team.git plugins/atomic/data/atomic-red-team; \
 fi
 
 WORKDIR /usr/src/app/plugins/emu
-
 # If emu is enabled, complete necessary installation steps
-RUN if [ $(grep -c "\- emu" ../../conf/local.yml)  ]; then \
-    apt-get -y install zlib1g unzip;                \
-    pip3 install -r requirements.txt;               \
-    ./download_payloads.sh;                         \
+RUN if [ $(grep -c "\- emu" ../../conf/local.yml) != 0 ]; then \
+    apt-get -y install zlib1g unzip && \
+    pip3 install -r requirements.txt && \
+    ./download_payloads.sh; \
 fi
 
 WORKDIR /usr/src/app
 
-# Install Node.js, npm, and other build VueJS front-end
-RUN apt-get update && \
-    apt-get install -y nodejs npm iproute2 net-tools && \
-    # Directly use npm to install dependencies and build the application
-    (cd plugins/magma && npm install) && \
-    (cd plugins/magma && npm run build) && \
-    # Remove Node.js, npm, and other unnecessary packages
-    apt-get remove -y nodejs npm && \
+# Install a more recent Node.js and npm from NodeSource
+RUN apt-get update && apt-get install -y curl
+RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - && \
+    apt-get install -y nodejs iproute2 net-tools
+
+# Verifica la presenza della cartella magma
+RUN ls -la plugins/magma
+
+# Installa le dipendenze e builda il front-end separatamente
+WORKDIR /usr/src/app/plugins/magma
+RUN npm install
+RUN npm run build
+
+# Rimuovi nodejs e npm per alleggerire l'immagine
+WORKDIR /usr/src/app
+RUN apt-get remove -y nodejs && \
     apt-get autoremove -y && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-WORKDIR /usr/src/app
 
 STOPSIGNAL SIGINT
 
@@ -116,4 +113,3 @@ EXPOSE 8022
 # Default FTP port for FTP C2 channel
 EXPOSE 2222
 
-#ENTRYPOINT ["python3", "server.py"]

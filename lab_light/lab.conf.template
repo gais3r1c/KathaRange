@@ -136,4 +136,8 @@ w_dashboard[port]="443:5601/tcp"
 # ===================================
 
 # (Add any future configurations here)
-
+## Monkey island 
+monkey_island[0]=A1
+monkey_island[image]="monkey_island:2.3.0-kathaRange"
+monkey_island[bridged]=true
+monkey_island[port]="5000:5000/tcp"

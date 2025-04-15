@@ -1,0 +1,8 @@
+{
+  "island_port": 5000,
+  "log_level": "DEBUG",
+  "mongodb": {
+    "start_mongodb": true
+  },
+  "data_dir": "/monkey_island_data"
+}
