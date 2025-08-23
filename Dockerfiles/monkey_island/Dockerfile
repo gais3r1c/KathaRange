@@ -5,10 +5,8 @@ FROM infectionmonkey/monkey-island:latest
 
 USER root
 
-RUN apt-get update && apt-get install -y iproute2 net-tools
-
-# Installiamo wget e gnupg (necessari per aggiungere il repo ufficiale di Mongo)
-RUN apt-get update && apt-get install -y wget gnupg
+# Installiamo tool per il debug di rete e wget e gnupg (necessari per aggiungere il repo ufficiale di Mongo)
+RUN apt-get update && apt-get install -y iproute2 net-tools wget gnupg iptables
 
 # Scarichiamo la chiave GPG di MongoDB 6.0 e la aggiungiamo al keyring
 RUN wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | apt-key add -
