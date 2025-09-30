@@ -34,3 +34,15 @@ services:
       context: monkey_island/
       dockerfile: Dockerfile
     image: monkey_island:${MONKEY_ISLAND_VERSION}
+
+  vuln_webapp:
+    build:
+      context: vuln_webapp/
+      dockerfile: Dockerfile
+    image: vuln_webapp:${VULN_WEBAPP_VERSION}
+
+  pc1:
+    build:
+      context: pc1/
+      dockerfile: Dockerfile
+    image: pc1:${PC1_VERSION}

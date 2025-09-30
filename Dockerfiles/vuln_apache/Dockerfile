@@ -13,7 +13,7 @@ RUN printf 'deb http://archive.debian.org/debian buster main contrib non-free\n'
 # Installa pacchetti di utilità e OpenSSH-server
 RUN apt-get update --allow-releaseinfo-change \
     && apt-get install -y \
-       iproute2 lsb-release vim procps curl syslog-ng netcat wget \
+       iproute2 lsb-release vim procps curl syslog-ng netcat wget iputils-ping netcat-traditional traceroute\
        openssh-server \
     && rm -rf /var/lib/apt/lists/*
 
@@ -23,8 +23,8 @@ RUN mkdir -p /var/run/sshd \
     && sed -i 's/^PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
 
 # Crea utente 'monkey' con password Monkey123!
-RUN useradd -m monkey \
-    && echo 'monkey:Monkey123!' | chpasswd
+#RUN useradd -m monkey \
+#    && echo 'monkey:Monkey123!' | chpasswd
 
 # Copia configurazione Apache personalizzata
 COPY ./httpd.conf /usr/local/apache2/conf/
