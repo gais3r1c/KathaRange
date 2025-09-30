@@ -5,5 +5,5 @@ echo 'nameserver 1.1.1.1' >> /etc/resolv.conf
 
 ip route add 192.168.0.0/16 via 10.10.1.1 dev eth0
 
-iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+iptables -t nat -A POSTROUTING -o eth1 -j MASQUERADE
 /etc/init.d/zebra start

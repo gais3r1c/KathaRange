@@ -3,7 +3,7 @@ ip route add default via 192.168.0.1 dev eth0
 
 echo 'nameserver 1.1.1.1' >> /etc/resolv.conf
 
-ip route add 192.168.2.0/24 via 192.168.0.1 dev eth0
+ip route add 192.168.0.0/16 via 192.168.0.1 dev eth0
 
 mkdir -p home/monkey-island/.monkey_island
 cp /shared/monkey_island/server_config.json /monkey/monkey_island/cc/server_config.json

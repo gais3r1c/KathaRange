@@ -1,9 +1,14 @@
 ip address add 192.168.3.10/24 dev eth0
 ip route add 0.0.0.0/0 via 192.168.3.1 dev eth0
 
-/bin/bash /shared/init_caldera_br_sandcat.sh
+/bin/sh /shared/init_caldera_br_sandcat.sh &
 echo 'nameserver 1.1.1.1' >> /etc/resolv.conf
+
 WAZUH_MANAGER='192.168.2.23' WAZUH_AGENT_NAME=$HOSTNAME dpkg -i /shared/wazuh-agent_4.9.0-1_amd64.deb
-systemctl start apache2
-systemctl enable wazuh-agent
-systemctl start wazuh-agent
+
+chmod +x /shared/apache2_1/start.sh
+/bin/sh /shared/apache2_1/start.sh
+
+/bin/sh /shared/scripts/create_ransom_dir.sh
+
+useradd -m admin && echo 'admin:password' | chpasswd
