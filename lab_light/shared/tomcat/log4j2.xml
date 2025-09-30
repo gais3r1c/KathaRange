@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="DEBUG"> <!-- Cambiato da INFO a DEBUG -->
+    <Appenders>
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+        </Console>
+    </Appenders>
+    <Loggers>
+        <Root level="ERROR"> <!-- Manteniamo ERROR per il livello generale del logger, ma potremmo cambiarlo se necessario -->
+            <AppenderRef ref="Console"/>
+        </Root>
+        <Logger name="VulnJSP" level="DEBUG" additivity="false"> <!-- Assicurati che il logger specifico sia in DEBUG -->
+            <AppenderRef ref="Console"/>
+        </Logger>
+    </Loggers>
+</Configuration>
