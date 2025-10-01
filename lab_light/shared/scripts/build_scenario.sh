@@ -1,4 +1,3 @@
-
 #!/usr/bin/env bash
 set -euo pipefail
 
@@ -83,7 +82,9 @@ detect_scenario() {
   else
     local stem="${name%.*}"
     echo "scenario_custom_${stem}"
+  fi
   shopt -u nocasematch
+
 }
 
 SCENARIO_DIR="$(detect_scenario "$PCAP_BASENAME")"
@@ -130,7 +131,25 @@ require_cmd docker
 require_cmd "$TSHARK_BIN"
 
 # ==========================
-# Step 1: Zeek (via Docker)
+# Step 1: Tshark → packet-level CSV
+# ==========================
+run_tshark() {
+  log "Estraggo packet-level CSV con tshark → $PKT_CSV"
+
+  # TCP (header incluso)
+  "$TSHARK_BIN" -r "$TARGET_PCAP" -T fields \
+    -e frame.time_epoch -e ip.src -e ip.dst \
+    -e tcp.srcport -e tcp.dstport -e tcp.flags \
+    -e ip.proto -e frame.len -E header=y -E separator=, > "$PKT_CSV" \
+    || warn "tshark TCP extraction ha restituito codice non-zero, continuo comunque"
+
+  log "Creato: $PKT_CSV"
+}
+
+run_tshark
+
+# ==========================
+# Step 2: Zeek (via Docker)
 #   - Log in ZEEK_LOGS_DIR
 # ==========================
 run_zeek() {
@@ -147,7 +166,7 @@ run_zeek() {
 run_zeek
 
 # ==========================
-# Step 1.1: Zeek conn.log (TSV) -> CSV
+# Step 2.1: Zeek conn.log (TSV) -> CSV
 # ==========================
 zeek_conn_to_csv() {
   local IN="$ZEEK_LOGS_DIR/conn.log"
@@ -182,23 +201,7 @@ zeek_conn_to_csv() {
 
 zeek_conn_to_csv
 
-# ==========================
-# Step 2: Tshark → packet-level CSV
-# ==========================
-run_tshark() {
-  log "Estraggo packet-level CSV con tshark → $PKT_CSV"
 
-  # TCP (header incluso)
-  "$TSHARK_BIN" -r "$TARGET_PCAP" -T fields \
-    -e frame.time_epoch -e ip.src -e ip.dst \
-    -e tcp.srcport -e tcp.dstport -e tcp.flags \
-    -e ip.proto -e frame.len -E header=y -E separator=, > "$PKT_CSV" \
-    || warn "tshark TCP extraction ha restituito codice non-zero, continuo comunque"
-
-  log "Creato: $PKT_CSV"
-}
-
-run_tshark
 
 log "=== FATTO ==="
 log "PCAP:              $TARGET_PCAP"

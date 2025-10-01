@@ -177,7 +177,7 @@ if [[ -z "$R5_CTR_ID" ]]; then
 else
   echo "[OK] r5 container: $R5_CTR_ID"
   echo "[*] Starting tcpdump inside r5..."
-  docker exec -d "$R5_CTR_ID" /bin/sh -c "tcpdump -i any -s 0 -w /tmp/s1-data.pcap"
+  docker exec -d "$R5_CTR_ID" /bin/sh -c "nohup tcpdump -i any -s 0 -w /home/snorty/s1-data.pcap 2>/dev/null &"
   echo "[OK] tcpdump started in background."
 fi
 
@@ -246,12 +246,13 @@ if [[ -n "$R5_CTR_ID" ]]; then
   TCPDUMP_PID=$(docker exec "$R5_CTR_ID" ps aux | grep '[t]cpdump -i any' | grep -v 'sh -c' | awk '{print $2}' || true)
   if [[ -n "$TCPDUMP_PID" ]]; then
     docker exec "$R5_CTR_ID" kill "$TCPDUMP_PID"
+    sleep 2
     echo "[OK] tcpdump stopped."
   else
     echo "[!] Could not find running tcpdump process in r5 container."
   fi
 
-  docker cp "$R5_CTR_ID":/tmp/s1-data.pcap "$PCAP_SAVE_DIR/s1-data.pcap"
+  docker cp "$R5_CTR_ID":/home/snorty/s1-data.pcap "$PCAP_SAVE_DIR/s1-data.pcap"
   echo "[OK] pcap file saved to $PCAP_SAVE_DIR/s1-data.pcap"
 else
   echo "[ ] tcpdump was not started, skipping polling and pcap saving."
