@@ -15,7 +15,7 @@ public class VulnApp {
         System.setProperty("log4j2.formatMsgNoLookups", "false"); // abilita lookup su 2.14.1
         Configurator.initialize(null, (String) null);
 
-        HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
+        HttpServer server = HttpServer.create(new InetSocketAddress(8888), 0);
         server.createContext("/", new RootHandler());
         server.setExecutor(null);
         System.out.println("VulnApp up on :8080");

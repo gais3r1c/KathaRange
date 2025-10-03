@@ -266,6 +266,19 @@ echo "[*] Saving all monkey events..."
   -H "X-CSRF-Token: $CSRF" \
   -H "Referer: https://monkey.com/infection/events" \
   "https://${MONKEY_HOST}/api/agent-events" | jq . > "$EVENTS_SAVE_DIR/events.json"
+
+echo "[*] Saving all the agents and machines involved in the simulation..."
+"${CURL_BASE[@]}" \
+  -H "Content-type: application/json" \
+  -H "Authentication-Token: $TOKEN" \
+  "https://${MONKEY_HOST}/api/machines" -o "$EVENTS_SAVE_DIR/machines.json"
+
+"${CURL_BASE[@]}" \
+  -H "Content-type: application/json" \
+  -H "Authentication-Token: $TOKEN" \
+  "https://${MONKEY_HOST}/api/agents" -o "$EVENTS_SAVE_DIR/agents.json"
+
+
 echo "[OK] monkey events saved to $EVENTS_SAVE_DIR/events.json"
 
 echo "[DONE] full flow completed. Check UI, container logs, and saved files to confirm."

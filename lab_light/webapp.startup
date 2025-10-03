@@ -3,6 +3,6 @@ ip route add default via 192.168.3.1 dev eth0
 
 echo 'nameserver 1.1.1.1' >> /etc/resolv.conf
 
-exec java -cp .:log4j-api-2.14.1.jar:log4j-core-2.14.1.jar VulnApp
-
 /bin/sh /shared/scripts/create_ransom_dir.sh
+
+exec java -cp .:log4j-api-2.14.1.jar:log4j-core-2.14.1.jar VulnApp

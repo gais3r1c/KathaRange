@@ -205,6 +205,6 @@ zeek_conn_to_csv
 
 log "=== FATTO ==="
 log "PCAP:              $TARGET_PCAP"
-log "Flow-level CSV:    $FLOW_DIR/flow-level.pcap"
+log "Flow-level CSV:    $FLOW_DIR/flow-level.csv"
 log "Packet-level CSV:  $PKT_CSV"
 
