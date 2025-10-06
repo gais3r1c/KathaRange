@@ -23,17 +23,21 @@ BLUE="\033[34m"; YELLOW="\033[33m"; RED="\033[31m"; RESET="\033[0m"
 usage() {
   cat <<EOF
 Uso:
-  $(basename "$0") PATH/AL/FILE.pcap
+  $(basename "$0") <path/al/file.pcap> <scenario_number>
+
+Argomenti:
+  <path/al/file.pcap>    : Il percorso completo del file PCAP da processare.
+  <scenario_number>      : Il numero dello scenario (1 o 2).
+                           1 -> scenario1_SSH_ransomware
+                           2 -> scenario2_LOG4J_ransomware
 
 Note:
-  - Lo script deduce lo scenario dal nome del file:
-      s1_*  -> scenario1_SSH_ransomware
-      s2_*  -> scenario2_LOG4J_ransomware
   - Output:
       dataset/<scenario>/{pcap,traffic/packet,traffic/flow/zeek-logs}
   - La creazione delle directory viene delegata a:
       $CREATE_SCRIPT
 EOF
+  exit 1
 }
 
 # ==========================
@@ -50,50 +54,40 @@ require_cmd() {
 # Parse args
 # ==========================
 PCAP_PATH=""
+SCENARIO_NUM=""
 
-for arg in "$@"; do
-  case "$arg" in
-    -h|--help) usage; exit 0 ;;
-    *)
-      if [[ -z "$PCAP_PATH" ]]; then
-        PCAP_PATH="$arg"
-      else
-        die "Argomento sconosciuto: $arg"
-      fi
-      ;;
-  esac
-done
+if [[ "$#" -ne 2 ]]; then
+  usage
+fi
 
-[[ -n "$PCAP_PATH" ]] || { usage; exit 1; }
+PCAP_PATH="$1"
+SCENARIO_NUM="$2"
+
+# Validazione PCAP
 [[ -f "$PCAP_PATH" ]] || die "PCAP inesistente: $PCAP_PATH"
-
 PCAP_BASENAME="$(basename -- "$PCAP_PATH")"
 
-# ==========================
-# Scenario detection
-# ==========================
-detect_scenario() {
-  local name="$1"
-  shopt -s nocasematch
-  if [[ "$name" =~ ^s1[_-] ]]; then
-    echo "scenario1_SSH_ransomware"
-  elif [[ "$name" =~ ^s2[_-] ]]; then
-    echo "scenario2_LOG4J_ransomware"
-  else
-    local stem="${name%.*}"
-    echo "scenario_custom_${stem}"
-  fi
-  shopt -u nocasematch
-
-}
-
-SCENARIO_DIR="$(detect_scenario "$PCAP_BASENAME")"
-log "Scenario rilevato: $SCENARIO_DIR"
+# Validazione scenario number
+if [[ "$SCENARIO_NUM" != "1" && "$SCENARIO_NUM" != "2" ]]; then
+  die "Numero di scenario non valido: $SCENARIO_NUM. Deve essere 1 o 2."
+fi
 
 # ==========================
-# Paths di output (non creo più le cartelle qui)
+# Scenario detection (non più dal nome del file, ma dall'argomento)
 # ==========================
-SCENARIO_ROOT="$DATASET_ROOT/$SCENARIO_DIR"
+SCENARIO_NAME=""
+if [[ "$SCENARIO_NUM" == "1" ]]; then
+  SCENARIO_NAME="scenario1_SSH_ransomware"
+elif [[ "$SCENARIO_NUM" == "2" ]]; then
+  SCENARIO_NAME="scenario2_LOG4J_ransomware"
+fi
+
+log "Scenario selezionato: $SCENARIO_NAME (numero $SCENARIO_NUM)"
+
+# ==========================
+# Paths di output
+# ==========================
+SCENARIO_ROOT="$DATASET_ROOT/$SCENARIO_NAME"
 PCAP_DIR="$SCENARIO_ROOT/pcap"
 PKT_DIR="$SCENARIO_ROOT/traffic/packet"
 FLOW_DIR="$SCENARIO_ROOT/traffic/flow"
@@ -107,9 +101,8 @@ if [[ ! -x "$CREATE_SCRIPT" ]]; then
 Crea il file e rendilo eseguibile (es. chmod +x $CREATE_SCRIPT)."
 fi
 
-log "Creo la struttura delle directory (delegato a $CREATE_SCRIPT)"
-# Passo DATASET_ROOT così lo script crea root/dataset/...
-"$CREATE_SCRIPT" "$DATASET_ROOT"
+log "Creo la struttura delle directory per lo scenario '$SCENARIO_NAME' (delegato a $CREATE_SCRIPT)"
+"$CREATE_SCRIPT" "$SCENARIO_NUM"
 
 # ==========================
 # Copia il pcap dentro la cartella scenario/pcap
@@ -136,7 +129,8 @@ require_cmd "$TSHARK_BIN"
 run_tshark() {
   log "Estraggo packet-level CSV con tshark → $PKT_CSV"
 
-  # TCP (header incluso)
+  # Assicurati che la directory di destinazione esista
+  mkdir -p "$PKT_DIR"
   "$TSHARK_BIN" -r "$TARGET_PCAP" -T fields \
     -e frame.time_epoch -e ip.src -e ip.dst \
     -e tcp.srcport -e tcp.dstport -e tcp.flags \
@@ -154,6 +148,8 @@ run_tshark
 # ==========================
 run_zeek() {
   log "Eseguo Zeek sul PCAP (log in zeek-logs/)"
+  # Assicurati che la directory di destinazione esista
+  mkdir -p "$ZEEK_LOGS_DIR"
   docker run --rm \
     -v "$PCAP_DIR":/pcap \
     -v "$ZEEK_LOGS_DIR":/zeek-logs \
@@ -183,6 +179,9 @@ zeek_conn_to_csv() {
   IN_BN="$(basename "$IN")"
   OUT_BN="$(basename "$OUT")"
 
+  # Assicurati che la directory di destinazione esista
+  mkdir -p "$FLOW_DIR"
+
   docker run --rm \
     -v "$ZEEK_LOGS_DIR":/logs \
     -v "$FLOW_DIR":/out \
@@ -201,10 +200,7 @@ zeek_conn_to_csv() {
 
 zeek_conn_to_csv
 
-
-
 log "=== FATTO ==="
 log "PCAP:              $TARGET_PCAP"
-log "Flow-level CSV:    $FLOW_DIR/flow-level.csv"
+log "Flow-level CSV:    $FLOW_DIR/flow_level.csv"
 log "Packet-level CSV:  $PKT_CSV"
-

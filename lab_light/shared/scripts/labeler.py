@@ -1,10 +1,10 @@
 import pandas as pd
 import os
+import sys
 
-def label_network_flows_simplified(flows_filepath, monkey_events_filepath, output_dir): # Rimosso wazuh_events_filepath
+def label_network_flows(flows_filepath, monkey_events_filepath, output_dir):
     """
     Etichetta i flussi di rete basandosi sugli eventi di Infection Monkey,
-    con una logica semplificata e vettorializzata, senza l'uso diretto di Wazuh per l'etichettatura dei flussi.
 
     Args:
         flows_filepath (str): Percorso al file CSV contenente i flussi di rete.
@@ -68,7 +68,6 @@ def label_network_flows_simplified(flows_filepath, monkey_events_filepath, outpu
         # Gestione del target specifico per vari tipi di eventi
         is_target_specific = pd.notna(event_target) and str(event_target).strip() != ''
 
-        # --- LOGICA SPECIFICA PER FileEncryptionEvent ---
         if event_type == 'FileEncryptionEvent':
             # Poiché la cifratura è un evento locale e il Target è vuoto,
             # etichettiamo solo i flussi dove l'IP sorgente corrisponde all'host che ha cifrato.
@@ -77,8 +76,7 @@ def label_network_flows_simplified(flows_filepath, monkey_events_filepath, outpu
             if label_condition.any():
                 num_labeled = flows_df.loc[label_condition].shape[0]
                 print(f"Debug **MONKEY**: Etichettati {num_labeled} flussi come 'FileEncryptionEvent' per sorgente {event_source} al tempo {event_time}.")
-            continue # Passa al prossimo evento Monkey, FileEncryptionEvent è gestito.
-        # --- FINE LOGICA SPECIFICA PER FileEncryptionEvent ---
+            continue # Passa al prossimo evento Monkey, FileEncryptionEvent è gestito
 
         # Logica per altri eventi Monkey (come prima)
         if event_type in ['PingScanEvent', 'TCPScanEvent', 'ExploitationEvent', 'PropagationEvent', 'HTTPRequestEvent', 'FingerprintingEvent']:
@@ -167,16 +165,29 @@ def label_network_flows_simplified(flows_filepath, monkey_events_filepath, outpu
     
     return flows_df
 
-# Path scenario1
-# flows = '/home/void/Uni/Tirocinio/KathaRange/lab_light/shared/dataset/scenario1_SSH_ransomware/traffic/flow/flow_level.csv'
-# monkey_evs = '/home/void/Uni/Tirocinio/KathaRange/lab_light/shared/dataset/scenario1_SSH_ransomware/monkey_events/events_monkey.csv'
-# output_directory = '/home/void/Uni/Tirocinio/KathaRange/lab_light/shared/dataset/scenario1_SSH_ransomware'
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Uso: python3 labeler.py <scenario_number>")
+        print("  <scenario_number>: 1 per scenario1 (SSH_ransomware), 2 per scenario2 (LOG4J_ransomware)")
+        sys.exit(1)
 
+    scenario_number = sys.argv[1]
 
-# Path scenario2
-flows = '/home/void/Uni/Tirocinio/KathaRange/lab_light/shared/dataset/scenario2_LOG4J_ransomware/traffic/flow/flow_level.csv'
-monkey_evs = '/home/void/Uni/Tirocinio/KathaRange/lab_light/shared/dataset/scenario2_LOG4J_ransomware/monkey_events/events_monkey.csv'
-output_directory = '/home/void/Uni/Tirocinio/KathaRange/lab_light/shared/dataset/scenario2_LOG4J_ransomware'
+    if scenario_number == '1':
+        flows = '/home/void/Uni/Tirocinio/KathaRange/lab_light/shared/dataset/scenario1_SSH_ransomware/traffic/flow/flow_level.csv'
+        monkey_evs = '/home/void/Uni/Tirocinio/KathaRange/lab_light/shared/dataset/scenario1_SSH_ransomware/monkey_events/events_monkey.csv'
+        output_directory = '/home/void/Uni/Tirocinio/KathaRange/lab_light/shared/dataset/scenario1_SSH_ransomware'
+        print("Scenario 1 (SSH_ransomware) selezionato.")
+    elif scenario_number == '2':
+        flows = '/home/void/Uni/Tirocinio/KathaRange/lab_light/shared/dataset/scenario2_LOG4J_ransomware/traffic/flow/flow_level.csv'
+        monkey_evs = '/home/void/Uni/Tirocinio/KathaRange/lab_light/shared/dataset/scenario2_LOG4J_ransomware/monkey_events/events_monkey.csv'
+        output_directory = '/home/void/Uni/Tirocinio/KathaRange/lab_light/shared/dataset/scenario2_LOG4J_ransomware'
+        print("Scenario 2 (LOG4J_ransomware) selezionato.")
+    else:
+        print(f"Errore: Scenario '{scenario_number}' non riconosciuto.")
+        print("Uso: python3 labeler.py <scenario_number>")
+        print("  <scenario_number>: 1 per scenario1 (SSH_ransomware), 2 per scenario2 (LOG4J_ransomware)")
+        sys.exit(1)
 
-# --- Esecuzione dello script ---
-labeled_df = label_network_flows_simplified(flows, monkey_evs, output_directory)
+    # --- Esecuzione dello script ---
+    labeled_df = label_network_flows(flows, monkey_evs, output_directory)

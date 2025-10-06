@@ -1,6 +1,7 @@
 import json
 import csv
 import re
+import sys
 
 def load_api_data(agents_filepath, machines_filepath):
     """
@@ -124,22 +125,33 @@ def convert_events_json_to_csv_minimal(
 
     print(f"Conversione minimale completata: {json_filepath} -> {csv_filepath}")
 
-# --- Esempio di utilizzo completo ---
-agents_api_path = "/home/void/Uni/Tirocinio/KathaRange/lab_light/shared/dataset/scenario1_SSH_ransomware/monkey_events/agents.json" 
-machines_api_path = "/home/void/Uni/Tirocinio/KathaRange/lab_light/shared/dataset/scenario1_SSH_ransomware/monkey_events/machines.json"
+if __name__ == "__main__":
+    # Aspettiamo 4 argomenti:
+    # 1: percorso del file JSON degli eventi
+    # 2: percorso del file JSON degli agenti
+    # 3: percorso del file JSON delle macchine
+    # 4: percorso del file CSV di output
+    if len(sys.argv) != 5:
+        print("Uso: python3 tuo_script_conversione.py <events_json_path> <agents_json_path> <machines_json_path> <output_csv_path>", file=sys.stderr)
+        sys.exit(1)
 
-# Carica i dati API
-agent_id_to_machine_id, machine_id_to_ip = load_api_data(agents_api_path, machines_api_path)
+    events_json_path = sys.argv[1]
+    agents_json_path = sys.argv[2]
+    machines_json_path = sys.argv[3]
+    csv_output_path = sys.argv[4]
 
-# Definisci i percorsi per gli eventi
-json_input_path = "/home/void/Uni/Tirocinio/KathaRange/lab_light/shared/dataset/scenario1_SSH_ransomware/monkey_events/events.json"
-#json_input_path = "/home/void/Uni/Tirocinio/KathaRange/lab_light/shared/prova.json"
-csv_output_path = "/home/void/Uni/Tirocinio/KathaRange/lab_light/shared/dataset/scenario1_SSH_ransomware/monkey_events/events_monkey.csv"
+    # Carica i dati API
+    agent_id_to_machine_id, machine_id_to_ip = load_api_data(agents_json_path, machines_json_path)
 
-# Converti gli eventi, usando i dati API
-convert_events_json_to_csv_minimal(
-    json_input_path, 
-    csv_output_path, 
-    agent_id_to_machine_id, 
-    machine_id_to_ip
-)
+    # Solo se le mappature sono state caricate correttamente, procedi con la conversione
+    if agent_id_to_machine_id and machine_id_to_ip:
+        # Converti gli eventi, usando i dati API
+        convert_events_json_to_csv_minimal(
+            events_json_path, 
+            csv_output_path, 
+            agent_id_to_machine_id, 
+            machine_id_to_ip
+        )
+    else:
+        print("Impossibile procedere con la conversione a causa di dati mancanti", file=sys.stderr)
+        sys.exit(1)

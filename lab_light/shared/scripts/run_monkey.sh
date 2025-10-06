@@ -177,7 +177,7 @@ if [[ -z "$R5_CTR_ID" ]]; then
 else
   echo "[OK] r5 container: $R5_CTR_ID"
   echo "[*] Starting tcpdump inside r5..."
-  docker exec -d "$R5_CTR_ID" /bin/sh -c "nohup tcpdump -i any -s 0 -w /home/snorty/s1-data.pcap 2>/dev/null &"
+  docker exec -d "$R5_CTR_ID" /bin/sh -c "nohup tcpdump -i any -s 0 -w /home/snorty/data.pcap 2>/dev/null &"
   echo "[OK] tcpdump started in background."
 fi
 
@@ -210,7 +210,7 @@ TIMEOUT_THRESHOLD=10      # Tempo in cui gli eventi non devono cambiare per cons
 
 
 if [[ -n "$R5_CTR_ID" ]]; then
-  echo "[*] Polling Infection Monkey API for agent activity completion (timeout if no new events for ${TIMEOUT_THRESHOLD}s)..."
+  echo "[*] Polling API for agent activity completion (timeout if no new events for ${TIMEOUT_THRESHOLD}s)..."
   
   LAST_EVENT_COUNT=0
   STABLE_COUNT_CYCLES=0
@@ -252,33 +252,46 @@ if [[ -n "$R5_CTR_ID" ]]; then
     echo "[!] Could not find running tcpdump process in r5 container."
   fi
 
-  docker cp "$R5_CTR_ID":/home/snorty/s1-data.pcap "$PCAP_SAVE_DIR/s1-data.pcap"
-  echo "[OK] pcap file saved to $PCAP_SAVE_DIR/s1-data.pcap"
+  docker cp "$R5_CTR_ID":/home/snorty/data.pcap "$PCAP_SAVE_DIR/data.pcap"
+  echo "[OK] pcap file saved to $PCAP_SAVE_DIR/data.pcap"
 else
   echo "[ ] tcpdump was not started, skipping polling and pcap saving."
 fi
 
 # ===== Save all agent events after attack termination =====
-echo "[*] Saving all monkey events..."
+EVS_TMP_FILE=$(mktemp)
+MACH_TMP_FILE=$(mktemp)
+AGS_TMP_FILE=$(mktemp)
+
+echo "[*] Saving all monkey events in JSON format..."
 "${CURL_BASE[@]}" \
   -H "Content-Type: application/json" \
   -H "Authentication-Token: $TOKEN" \
   -H "X-CSRF-Token: $CSRF" \
   -H "Referer: https://monkey.com/infection/events" \
-  "https://${MONKEY_HOST}/api/agent-events" | jq . > "$EVENTS_SAVE_DIR/events.json"
+  "https://${MONKEY_HOST}/api/agent-events" -o "$EVS_TMP_FILE"
 
 echo "[*] Saving all the agents and machines involved in the simulation..."
 "${CURL_BASE[@]}" \
   -H "Content-type: application/json" \
   -H "Authentication-Token: $TOKEN" \
-  "https://${MONKEY_HOST}/api/machines" -o "$EVENTS_SAVE_DIR/machines.json"
+  "https://${MONKEY_HOST}/api/machines" -o "$MACH_TMP_FILE"
 
 "${CURL_BASE[@]}" \
   -H "Content-type: application/json" \
   -H "Authentication-Token: $TOKEN" \
-  "https://${MONKEY_HOST}/api/agents" -o "$EVENTS_SAVE_DIR/agents.json"
+  "https://${MONKEY_HOST}/api/agents" -o "$AGS_TMP_FILE"
+
+echo "[*] Converting monkey events from JSON to CSV"
+python3 ~/Uni/Tirocinio/KathaRange/lab_light/shared/scripts/convert_monkey_events.py \
+  "$EVS_TMP_FILE" \
+  "$AGS_TMP_FILE" \
+  "$MACH_TMP_FILE" \
+  "$EVENTS_SAVE_DIR/events_monkey.csv"
+
+rm "$EVS_TMP_FILE" "$MACH_TMP_FILE" "$AGS_TMP_FILE"
 
 
-echo "[OK] monkey events saved to $EVENTS_SAVE_DIR/events.json"
+echo "[OK] monkey events saved to $EVENTS_SAVE_DIR/events_monkey.csv"
 
 echo "[DONE] full flow completed. Check UI, container logs, and saved files to confirm."

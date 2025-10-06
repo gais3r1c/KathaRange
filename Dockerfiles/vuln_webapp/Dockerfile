@@ -1,4 +1,4 @@
-FROM eclipse-temurin:8-jdk AS build
+FROM eclipse-temurin:8-jdk-jammy AS build
 
 WORKDIR /app
 
@@ -11,7 +11,7 @@ COPY log4j2.xml /app/
 
 RUN javac -cp "log4j-api-2.14.1.jar:log4j-core-2.14.1.jar:." VulnApp.java
 # ==================================================================
-FROM eclipse-temurin:8-jre
+FROM eclipse-temurin:8-jre-jammy
 WORKDIR /app
 
 COPY --from=build /app /app
