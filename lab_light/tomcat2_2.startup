@@ -9,12 +9,10 @@ service wazuh-agent start
 
 export CATALINA_OPTS="$CATALINA_OPTS -Dlog4j2.formatMsgNoLookups=false -Dcom.sun.jndi.ldap.object.trustURLCodebase=true"
 
-mkdir -p /usr/local/tomcat/webapps/ROOT/WEB-INF/classes
-cp -v /shared/tomcat/log4j2.xml /usr/local/tomcat/webapps/ROOT/WEB-INF/classes
+cp -v /shared/tomcat/log4j-api-2.14.1.jar /usr/local/tomcat/lib/
+cp -v /shared/tomcat/log4j-core-2.14.1.jar /usr/local/tomcat/lib/
+cp -v /shared/tomcat/log4j2.xml /usr/local/tomcat/lib/ # Anche la configurazione
 
-mkdir -p /usr/local/tomcat/webapps/ROOT/WEB-INF/lib
-cp -v /shared/tomcat/log4j-api-2.14.1.jar  /usr/local/tomcat/webapps/ROOT/WEB-INF/lib/
-cp -v /shared/tomcat/log4j-core-2.14.1.jar /usr/local/tomcat/webapps/ROOT/WEB-INF/lib/
+mkdir -p /usr/local/tomcat/webapps/vulnerable
 
-mkdir -p /usr/local/tomcat/webapps/ROOT
-cp -v /shared/tomcat/index.jsp /usr/local/tomcat/webapps/ROOT/index.jsp
+cp -v /shared/tomcat/vuln.jsp /usr/local/tomcat/webapps/vulnerable/index.jsp
